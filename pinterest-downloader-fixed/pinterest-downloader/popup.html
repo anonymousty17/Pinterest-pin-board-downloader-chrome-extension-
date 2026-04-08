@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pin Downloader</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap');
+
+    :root {
+      --bg: #0d0d0d;
+      --surface: #161616;
+      --border: #2a2a2a;
+      --accent: #e60023;
+      --accent2: #ff6b6b;
+      --text: #f0ece4;
+      --muted: #6b6b6b;
+      --success: #3ecf8e;
+      --mono: 'Space Mono', monospace;
+      --sans: 'Syne', sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      width: 360px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      overflow-x: hidden;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 18px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      position: relative;
+    }
+    .logo {
+      width: 28px; height: 28px;
+      background: var(--accent);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; font-weight: 800; color: #fff;
+      font-family: var(--sans);
+      flex-shrink: 0;
+    }
+    .title {
+      font-size: 15px; font-weight: 800;
+      letter-spacing: -0.3px;
+      line-height: 1;
+    }
+    .subtitle {
+      font-size: 10px; color: var(--muted);
+      font-family: var(--mono);
+      letter-spacing: 0.5px;
+      margin-top: 2px;
+    }
+    .status-dot {
+      margin-left: auto;
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--muted);
+      transition: background 0.3s;
+    }
+    .status-dot.active { background: var(--success); box-shadow: 0 0 6px var(--success); }
+    .status-dot.error  { background: var(--accent); }
+
+    /* ── Body ── */
+    .body { padding: 16px 18px; }
+
+    /* ── Page info ── */
+    .page-info {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+      margin-bottom: 14px;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .page-info span { color: var(--text); font-size: 11px; }
+
+    /* ── Scan mode toggle ── */
+    .mode-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .mode-btn {
+      flex: 1;
+      padding: 8px 0;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.5px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-transform: uppercase;
+    }
+    .mode-btn.selected {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(230,0,35,0.08);
+    }
+    .mode-btn:hover:not(.selected) { border-color: #444; color: var(--text); }
+
+    /* ── Primary action btn ── */
+    .scan-btn {
+      width: 100%;
+      padding: 11px;
+      background: var(--accent);
+      border: none;
+      border-radius: 6px;
+      color: #fff;
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      margin-bottom: 14px;
+    }
+    .scan-btn:hover { opacity: 0.88; }
+    .scan-btn:active { transform: scale(0.98); }
+    .scan-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+    /* ── Progress bar ── */
+    .progress-wrap {
+      margin-bottom: 14px;
+      display: none;
+    }
+    .progress-wrap.visible { display: block; }
+    .progress-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--muted);
+      margin-bottom: 5px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .progress-track {
+      height: 3px;
+      background: var(--border);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 99px;
+      width: 0%;
+      transition: width 0.3s;
+    }
+    .progress-fill.indeterminate {
+      width: 40%;
+      animation: slide 1.2s ease-in-out infinite;
+    }
+    @keyframes slide {
+      0%   { transform: translateX(-100%); }
+      100% { transform: translateX(350%); }
+    }
+
+    /* ── Results panel ── */
+    .results {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 14px;
+      display: none;
+    }
+    .results.visible { display: block; }
+    .results-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .results-count {
+      font-family: var(--mono);
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--success);
+      line-height: 1;
+    }
+    .results-label {
+      font-size: 10px;
+      color: var(--muted);
+      font-family: var(--mono);
+      margin-top: 2px;
+    }
+    .preview-strip {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 10px;
+      overflow: hidden;
+      border-radius: 4px;
+    }
+    .preview-thumb {
+      width: 54px; height: 54px;
+      object-fit: cover;
+      border-radius: 3px;
+      background: var(--border);
+      flex-shrink: 0;
+    }
+    .preview-more {
+      width: 54px; height: 54px;
+      border-radius: 3px;
+      background: var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+
+    /* ── Download btn ── */
+    .dl-btn {
+      width: 100%;
+      padding: 10px;
+      background: transparent;
+      border: 1px solid var(--success);
+      border-radius: 6px;
+      color: var(--success);
+      font-family: var(--sans);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+      letter-spacing: 0.3px;
+    }
+    .dl-btn:hover { background: rgba(62,207,142,0.1); }
+    .dl-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    /* ── Message / error ── */
+    .msg {
+      font-family: var(--mono);
+      font-size: 10px;
+      padding: 9px 12px;
+      border-radius: 5px;
+      line-height: 1.5;
+      margin-bottom: 12px;
+      display: none;
+    }
+    .msg.visible { display: block; }
+    .msg.warn { background: rgba(230,0,35,0.1); border: 1px solid rgba(230,0,35,0.3); color: var(--accent2); }
+    .msg.info { background: rgba(62,207,142,0.08); border: 1px solid rgba(62,207,142,0.2); color: var(--success); }
+
+    /* ── Footer ── */
+    .footer {
+      padding: 10px 18px;
+      border-top: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 9px;
+      color: var(--muted);
+      text-align: center;
+      letter-spacing: 0.4px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="logo">P</div>
+    <div>
+      <div class="title">PIN DOWNLOADER</div>
+      <div class="subtitle">BULK IMAGE EXPORT</div>
+    </div>
+    <div class="status-dot" id="statusDot"></div>
+  </div>
+
+  <div class="body">
+
+    <div class="page-info" id="pageInfo">
+      Checking page… <span id="pageUrl"></span>
+    </div>
+
+    <div class="msg" id="msgBox"></div>
+
+    <div class="mode-row">
+      <button class="mode-btn selected" id="modeQuick" data-mode="quick">⚡ Quick Scan</button>
+      <button class="mode-btn" id="modeFull" data-mode="full">🔄 Full Scroll</button>
+    </div>
+
+    <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:12px;line-height:1.5;">
+      QUICK: visible pins only · FULL: auto-scrolls to load all
+    </div>
+
+    <button class="scan-btn" id="scanBtn">SCAN FOR PINS</button>
+
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-label">
+        <span id="progressLabel">Scanning…</span>
+        <span id="progressCount">—</span>
+      </div>
+      <div class="progress-track"><div class="progress-fill indeterminate" id="progressFill"></div></div>
+    </div>
+
+    <div class="results" id="resultsPanel">
+      <div class="results-header">
+        <div>
+          <div class="results-count" id="resultsCount">0</div>
+          <div class="results-label">IMAGES FOUND</div>
+        </div>
+      </div>
+      <div class="preview-strip" id="previewStrip"></div>
+      <button class="dl-btn" id="downloadBtn">⬇ DOWNLOAD ALL IMAGES</button>
+    </div>
+
+  </div>
+
+  <div class="footer">ONLY WORKS ON PINTEREST.COM</div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
